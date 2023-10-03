@@ -1,8 +1,8 @@
 import { Web3FunctionProxyProvider } from "./Web3FunctionProxyProvider";
 import { MultiChainProviderConfig } from "./types";
 
-import axios from "axios";
 import { StaticJsonRpcProvider } from "@ethersproject/providers";
+import axios from "axios";
 
 describe("Web3FunctionProxyProvider", () => {
   enum TestChainIds {
@@ -34,14 +34,13 @@ describe("Web3FunctionProxyProvider", () => {
   beforeEach(async () => {
     proxyProvider = new Web3FunctionProxyProvider(
       proxyProviderHost,
-      proxyProviderPort,
       rpcLimit,
       TestChainIds.Goerli,
       multiChainProviderConfig,
       false
     );
 
-    await proxyProvider.start();
+    await proxyProvider.start(proxyProviderPort);
   });
 
   afterEach(() => {
