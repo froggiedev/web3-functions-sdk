@@ -37,7 +37,10 @@ export class Web3FunctionRunnerPool {
           this._log(
             `Starting Web3FunctionRunner, active=${this._activeRunners} port=${port}`
           );
-          const runner = new Web3FunctionRunner(this._debug);
+          const runner = new Web3FunctionRunner(
+            this._debug,
+            this._tcpPortsAvailable
+          );
           payload.options.serverPort = port;
           const exec = await runner.run(payload);
           resolve(exec);

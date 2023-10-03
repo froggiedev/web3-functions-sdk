@@ -38,6 +38,7 @@ const delay = (t: number) => new Promise((resolve) => setTimeout(resolve, t));
 export class Web3FunctionRunner {
   private _debug: boolean;
   private _memory = 0;
+  private _portsOccupied: number[];
   private _proxyProvider?: Web3FunctionProxyProvider;
   private _httpProxy?: Web3FunctionHttpProxy;
   private _client?: Web3FunctionHttpClient;
@@ -47,8 +48,9 @@ export class Web3FunctionRunner {
   // eslint-disable-next-line @typescript-eslint/no-empty-function
   private _exitRemover: () => void = () => {};
 
-  constructor(debug = false) {
+  constructor(debug = false, portsOccupied: number[] = []) {
     this._debug = debug;
+    this._portsOccupied = portsOccupied;
   }
 
   public validateUserArgs(
@@ -329,11 +331,6 @@ export class Web3FunctionRunner {
       this._debug
     );
 
-    const mountPath = randomUUID();
-    const serverPort =
-      options.serverPort ?? (await Web3FunctionNetHelper.getAvailablePort());
-
-    const httpProxyPort = await Web3FunctionNetHelper.getAvailablePort();
     const httpProxyHost =
       options.runtime === "thread" ? "127.0.0.1" : "host.docker.internal";
     this._httpProxy = new Web3FunctionHttpProxy(
@@ -342,8 +339,15 @@ export class Web3FunctionRunner {
       options.requestLimit,
       this._debug
     );
-
+    const httpProxyPort = await Web3FunctionNetHelper.getAvailablePort(
+      this._portsOccupied
+    );
     this._httpProxy.start(httpProxyPort);
+
+    const mountPath = randomUUID();
+    const serverPort =
+      options.serverPort ??
+      (await Web3FunctionNetHelper.getAvailablePort(this._portsOccupied));
 
     try {
       this._log(`Starting sandbox: ${script}`);
@@ -365,16 +369,15 @@ export class Web3FunctionRunner {
     this._exitRemover = onExit(() => this.stop());
 
     // Proxy RPC provider
-    const proxyProviderPort = await Web3FunctionNetHelper.getAvailablePort();
     this._proxyProvider = new Web3FunctionProxyProvider(
       "http://127.0.0.1",
-      proxyProviderPort,
       options.rpcLimit,
       context.gelatoArgs.chainId,
       multiChainProviderConfig,
       this._debug
     );
-    await this._proxyProvider.start();
+    const proxyProviderPort = await Web3FunctionNetHelper.getAvailablePort();
+    await this._proxyProvider.start(proxyProviderPort);
     context.rpcProviderUrl = this._proxyProvider.getProxyUrl();
 
     // Override gelatoArgs according to schema version
